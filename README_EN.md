@@ -5,6 +5,7 @@
 </p>
 
 # CS2-HanZipLine
+video https://www.youtube.com/watch?v=SXD7qUIVCKA
 
 A two-way zipline plugin for CS2 servers. Players can place and ride ziplines with `F`. Administrators can save every player-built zipline on a map as a persistent map layout that restores whenever the map loads.
 
