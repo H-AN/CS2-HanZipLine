@@ -12,6 +12,12 @@
     "MaxDistance": 5000.0,
     "AnchorSeparation": 96.0,
     "UseRadius": 96.0,
+    // BOT 逻辑默认关闭。开启后会在 BotUseRange 内朝最近端点移动，进入 UseRadius 后由插件直接挂索，不模拟按键。
+    "BotAllowUse": false,
+    "BotUseRange": 300.0,
+    "BotUseCooldownSeconds": 20.0,
+    "BotTargetTimeoutSeconds": 5.0,
+    "BotApproachSpeed": 450.0,
     "RideSpeed": 700.0,
     "ArrivalDistance": 48.0,
     "AlignmentSpeed": 240.0,

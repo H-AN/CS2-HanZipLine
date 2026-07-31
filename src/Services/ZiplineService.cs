@@ -3,6 +3,7 @@ using SwiftlyS2.Shared;
 using SwiftlyS2.Shared.Misc;
 using SwiftlyS2.Shared.Natives;
 using SwiftlyS2.Shared.Players;
+using SwiftlyS2.Shared.SchemaDefinitions;
 
 namespace CS2HanZipLine.Services;
 
@@ -21,6 +22,7 @@ public sealed class ZiplineService(
     private readonly Dictionary<int, ZiplinePair> _pairsById = [];
     private readonly Dictionary<int, ZiplinePair> _pendingPairsById = [];
     private readonly Dictionary<ulong, float> _lastCreateTimeBySteamId = [];
+    private readonly Dictionary<ulong, BotZiplineState> _botStatesBySessionId = [];
     private readonly List<int> _pairIdsToRemove = [];
     private readonly List<int> _pendingPairIdsToStart = [];
     private readonly List<int> _pendingPairIdsToCancel = [];
@@ -40,6 +42,7 @@ public sealed class ZiplineService(
         _rides.MapGenerationResolver = mapGenerationResolver;
         _rides.PairResolver = TryGetPair;
         _rides.PairBecameUnused = pair => RemovePair(pair.Id, ZiplineDetachReason.PairRemoved);
+        _rides.RiderDetached = HandleRiderDetached;
     }
 
     public void UpdateConfig(ZiplineConfig config)
@@ -304,7 +307,7 @@ public sealed class ZiplineService(
             return;
         }
 
-        if (!TryFindNearestUsableAnchor(player, out var pair, out var movingFromA))
+        if (!TryFindNearestUsableAnchor(player, _config.UseRadius, out var pair, out var movingFromA))
         {
             return;
         }
@@ -314,7 +317,11 @@ public sealed class ZiplineService(
 
     public void HandlePlayerDeath(int playerId) => _rides.DetachForPlayerId(playerId, ZiplineDetachReason.Death);
 
-    public void HandleClientDisconnected(int playerId) => _rides.DetachForPlayerId(playerId, ZiplineDetachReason.Disconnect);
+    public void HandleClientDisconnected(int playerId)
+    {
+        _rides.DetachForPlayerId(playerId, ZiplineDetachReason.Disconnect);
+        RemoveBotStateForPlayerId(playerId);
+    }
 
     public void HandleRoundEnd()
     {
@@ -355,6 +362,7 @@ public sealed class ZiplineService(
         }
 
         _pairIdsToRemove.Clear();
+        DriveBots(now);
         _rides.OnTick();
     }
 
@@ -382,6 +390,7 @@ public sealed class ZiplineService(
         _pendingPairIdsToCancel.Clear();
         _lastCreateTimeBySteamId.Clear();
         _rides.ClearAll(reason);
+        _botStatesBySessionId.Clear();
     }
 
     private bool TryCreatePair(
@@ -658,7 +667,141 @@ public sealed class ZiplineService(
         }
     }
 
-    private bool TryFindNearestUsableAnchor(IPlayer player, out ZiplinePair pair, out bool movingFromA)
+    private void DriveBots(float now)
+    {
+        if (!_config.BotAllowUse)
+        {
+            _botStatesBySessionId.Clear();
+            return;
+        }
+
+        foreach (var bot in _core.PlayerManager.GetBots())
+        {
+            if (!TryGetLiveBotPawn(bot, out var pawn))
+            {
+                continue;
+            }
+
+            if (!_botStatesBySessionId.TryGetValue(bot.SessionId, out var state))
+            {
+                state = new BotZiplineState { PlayerId = bot.PlayerID };
+                _botStatesBySessionId[bot.SessionId] = state;
+            }
+
+            if (_rides.IsRiding(bot) || now < state.NextEligibleAt)
+            {
+                continue;
+            }
+
+            if (!TryFindNearestUsableAnchor(bot, _config.BotUseRange, out var pair, out var movingFromA))
+            {
+                ResetBotTarget(state);
+                continue;
+            }
+
+            if (state.TargetPairId != pair.Id || state.MovingFromA != movingFromA)
+            {
+                state.TargetPairId = pair.Id;
+                state.MovingFromA = movingFromA;
+                state.TargetStartedAt = now;
+            }
+
+            if (_config.BotTargetTimeoutSeconds > 0.0f
+                && now - state.TargetStartedAt >= _config.BotTargetTimeoutSeconds)
+            {
+                state.NextEligibleAt = now + _config.BotUseCooldownSeconds;
+                ResetBotTarget(state);
+                continue;
+            }
+
+            var target = movingFromA ? pair.AnchorA.BasePosition : pair.AnchorB.BasePosition;
+            if (pawn.AbsOrigin is not { } pawnPosition)
+            {
+                continue;
+            }
+
+            if (ZiplineMath.DistanceSquared(pawnPosition, target) <= _config.UseRadius * _config.UseRadius)
+            {
+                if (_rides.TryAttach(bot, pair, movingFromA, ResolveMapGeneration(), out _))
+                {
+                    state.NextEligibleAt = now + _config.BotUseCooldownSeconds;
+                    ResetBotTarget(state);
+                }
+
+                continue;
+            }
+
+            DriveBotToAnchor(pawn, target);
+        }
+    }
+
+    private void DriveBotToAnchor(CCSPlayerPawn pawn, Vector target)
+    {
+        if (pawn.AbsOrigin is not { } pawnPosition)
+        {
+            return;
+        }
+
+        var horizontalDirection = new Vector(
+            target.X - pawnPosition.X,
+            target.Y - pawnPosition.Y,
+            0.0f);
+        if (!ZiplineMath.TryNormalize(horizontalDirection, out horizontalDirection))
+        {
+            return;
+        }
+
+        // Keep the bot's view untouched; only the engine movement path supplies an approach velocity.
+        pawn.Teleport(null, null, horizontalDirection * _config.BotApproachSpeed);
+    }
+
+    private void HandleRiderDetached(RiderState rider, ZiplineDetachReason _)
+    {
+        if (_botStatesBySessionId.TryGetValue(rider.SessionId, out var state))
+        {
+            state.NextEligibleAt = _core.Engine.GlobalVars.CurrentTime + _config.BotUseCooldownSeconds;
+            ResetBotTarget(state);
+        }
+    }
+
+    private void RemoveBotStateForPlayerId(int playerId)
+    {
+        ulong? sessionIdToRemove = null;
+        foreach (var entry in _botStatesBySessionId)
+        {
+            if (entry.Value.PlayerId == playerId)
+            {
+                sessionIdToRemove = entry.Key;
+                break;
+            }
+        }
+
+        if (sessionIdToRemove is { } sessionId)
+        {
+            _botStatesBySessionId.Remove(sessionId);
+        }
+    }
+
+    private static void ResetBotTarget(BotZiplineState state)
+    {
+        state.TargetPairId = -1;
+        state.MovingFromA = false;
+        state.TargetStartedAt = 0.0f;
+    }
+
+    private static bool TryGetLiveBotPawn(IPlayer player, out CCSPlayerPawn pawn)
+    {
+        pawn = null!;
+        if (player is not { IsValid: true, IsFakeClient: true, IsAlive: true, PlayerPawn: { IsValid: true } playerPawn })
+        {
+            return false;
+        }
+
+        pawn = playerPawn;
+        return true;
+    }
+
+    private bool TryFindNearestUsableAnchor(IPlayer player, float radius, out ZiplinePair pair, out bool movingFromA)
     {
         pair = null!;
         movingFromA = true;
@@ -668,7 +811,7 @@ public sealed class ZiplineService(
         }
 
         var now = _core.Engine.GlobalVars.CurrentTime;
-        var radiusSquared = _config.UseRadius * _config.UseRadius;
+        var radiusSquared = radius * radius;
         var nearestDistanceSquared = float.MaxValue;
         foreach (var candidate in _pairsById.Values)
         {

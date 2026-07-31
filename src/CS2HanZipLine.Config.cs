@@ -12,6 +12,11 @@ public sealed class ZiplineConfig
     public float MaxDistance { get; set; } = 5000.0f;
     public float AnchorSeparation { get; set; } = 96.0f;
     public float UseRadius { get; set; } = 96.0f;
+    public bool BotAllowUse { get; set; }
+    public float BotUseRange { get; set; } = 300.0f;
+    public float BotUseCooldownSeconds { get; set; } = 20.0f;
+    public float BotTargetTimeoutSeconds { get; set; } = 5.0f;
+    public float BotApproachSpeed { get; set; } = 450.0f;
     public float RideSpeed { get; set; } = 700.0f;
     public float ArrivalDistance { get; set; } = 48.0f;
     public float AlignmentSpeed { get; set; } = 240.0f;
@@ -66,6 +71,10 @@ public sealed class ZiplineConfig
         clone.MaxDistance = Math.Max(clone.MinDistance, clone.MaxDistance);
         clone.AnchorSeparation = Math.Max(1.0f, clone.AnchorSeparation);
         clone.UseRadius = Math.Max(1.0f, clone.UseRadius);
+        clone.BotUseRange = Math.Max(clone.UseRadius, clone.BotUseRange);
+        clone.BotUseCooldownSeconds = Math.Max(0.0f, clone.BotUseCooldownSeconds);
+        clone.BotTargetTimeoutSeconds = Math.Max(0.0f, clone.BotTargetTimeoutSeconds);
+        clone.BotApproachSpeed = Math.Max(1.0f, clone.BotApproachSpeed);
         clone.RideSpeed = Math.Max(1.0f, clone.RideSpeed);
         clone.ArrivalDistance = Math.Max(1.0f, clone.ArrivalDistance);
         clone.AlignmentSpeed = Math.Max(0.0f, clone.AlignmentSpeed);

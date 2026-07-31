@@ -28,7 +28,7 @@ public sealed class ZiplineSoundService(ISwiftlyCore core, ILogger<ZiplineSoundS
 
     private void PlayForPlayer(IPlayer player, string soundName)
     {
-        if (string.IsNullOrWhiteSpace(soundName) || player is null || !player.IsValid || player.IsFakeClient || player.PlayerID < 0)
+        if (string.IsNullOrWhiteSpace(soundName) || player is null || !player.IsValid || player.PlayerID < 0)
         {
             return;
         }
@@ -36,10 +36,11 @@ public sealed class ZiplineSoundService(ISwiftlyCore core, ILogger<ZiplineSoundS
         try
         {
             using var sound = new SoundEvent(soundName, _config.SoundVolume, _config.SoundPitch);
-            sound.SourceEntityIndex = player.IsAlive && player.PlayerPawn is { IsValid: true } pawn
+            sound.SourceEntityIndex = player.PlayerPawn is { IsValid: true } pawn
                 ? (int)pawn.Index
                 : -1;
-            sound.Recipients.AddRecipient(player.PlayerID);
+            // Send to every client; the source entity lets CS2 apply normal positional attenuation.
+            sound.Recipients.AddAllPlayers();
 
             if (sound.Recipients.GetRecipientCount() > 0)
             {

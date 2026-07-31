@@ -20,6 +20,7 @@ public sealed class ZiplineRideService(ISwiftlyCore core, ZiplineEntityService e
     public Func<int, ZiplinePair?>? PairResolver { get; set; }
     public Func<int>? MapGenerationResolver { get; set; }
     public Action<ZiplinePair>? PairBecameUnused { get; set; }
+    public Action<RiderState, ZiplineDetachReason>? RiderDetached { get; set; }
 
     public void UpdateConfig(ZiplineConfig config) => _config = config.CloneNormalized();
 
@@ -177,7 +178,7 @@ public sealed class ZiplineRideService(ISwiftlyCore core, ZiplineEntityService e
         }
 
         var player = _core.PlayerManager.GetPlayerFromSessionId(state.SessionId);
-        if (player is null || !TryGetUsablePlayerPawn(player, out var pawn) || player.SessionId != state.SessionId || player.IsFakeClient)
+        if (player is null || !TryGetUsablePlayerPawn(player, out var pawn) || player.SessionId != state.SessionId)
         {
             return ZiplineDetachReason.Safety;
         }
@@ -286,6 +287,8 @@ public sealed class ZiplineRideService(ISwiftlyCore core, ZiplineEntityService e
             PairBecameUnused?.Invoke(pair);
         }
 
+        RiderDetached?.Invoke(state, reason);
+
         return true;
     }
 
@@ -305,7 +308,7 @@ public sealed class ZiplineRideService(ISwiftlyCore core, ZiplineEntityService e
     private static bool TryGetUsablePlayerPawn(IPlayer? player, out CCSPlayerPawn pawn)
     {
         pawn = null!;
-        if (player is null || !player.IsValid || player.IsFakeClient || !player.IsAlive || player.PlayerPawn is not { IsValid: true } playerPawn)
+        if (player is null || !player.IsValid || !player.IsAlive || player.PlayerPawn is not { IsValid: true } playerPawn)
         {
             return false;
         }
