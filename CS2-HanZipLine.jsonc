@@ -12,6 +12,8 @@
     "MaxDistance": 5000.0,
     "AnchorSeparation": 96.0,
     "UseRadius": 96.0,
+    // true: CT、T、Bot 可以使用全部滑索。false: 只能使用本队和全局滑索。
+    "AllowAllTeamsUseZiplines": true,
     // BOT 逻辑默认关闭。开启后会在 BotUseRange 内朝最近端点移动，进入 UseRadius 后由插件直接挂索，不模拟按键。
     "BotAllowUse": false,
     "BotUseRange": 300.0,
@@ -38,8 +40,10 @@
     "BeamWidth": 0.5,
     "BeamEndWidth": 0.5,
     "BeamHaloScale": 3.0,
-    "BeamColor": "255 255 255 255",
-    "AdminVisionGlowColor": "255 210 35 255",
+    // 支持 RGB 或 RGBA。这三组颜色同时用于激光绳和管理员透视外发光。
+    "CTZiplineColor": "80 180 255 255",
+    "TZiplineColor": "255 80 80 255",
+    "GlobalZiplineColor": "255 255 255 255",
     "AdminVisionGlowRange": 5000,
 
     // 声音事件留空时仅禁用该声音，不改变滑索状态机。

@@ -12,6 +12,7 @@ public sealed class ZiplineConfig
     public float MaxDistance { get; set; } = 5000.0f;
     public float AnchorSeparation { get; set; } = 96.0f;
     public float UseRadius { get; set; } = 96.0f;
+    public bool AllowAllTeamsUseZiplines { get; set; } = true;
     public bool BotAllowUse { get; set; }
     public float BotUseRange { get; set; } = 300.0f;
     public float BotUseCooldownSeconds { get; set; } = 20.0f;
@@ -35,8 +36,9 @@ public sealed class ZiplineConfig
     public float BeamWidth { get; set; } = 0.5f;
     public float BeamEndWidth { get; set; } = 0.5f;
     public float BeamHaloScale { get; set; } = 3.0f;
-    public string BeamColor { get; set; } = "255 255 255 255";
-    public string AdminVisionGlowColor { get; set; } = "255 210 35 255";
+    public string CTZiplineColor { get; set; } = "80 180 255 255";
+    public string TZiplineColor { get; set; } = "255 80 80 255";
+    public string GlobalZiplineColor { get; set; } = "255 255 255 255";
     public int AdminVisionGlowRange { get; set; } = 5000;
 
     public string PrecacheSoundEvent { get; set; } = "soundevents/game_sounds_ui.vsndevts";
@@ -102,9 +104,13 @@ public sealed class ZiplineConfig
         clone.BuildFlightModel = string.IsNullOrWhiteSpace(clone.BuildFlightModel)
             ? "weapons/models/grenade/decoy/weapon_decoy.vmdl"
             : clone.BuildFlightModel.Trim();
-        clone.AdminVisionGlowColor = string.IsNullOrWhiteSpace(clone.AdminVisionGlowColor)
-            ? "255 210 35 255"
-            : clone.AdminVisionGlowColor.Trim();
+        clone.CTZiplineColor = NormalizeColor(clone.CTZiplineColor, "80 180 255 255");
+        clone.TZiplineColor = NormalizeColor(clone.TZiplineColor, "255 80 80 255");
+        clone.GlobalZiplineColor = NormalizeColor(clone.GlobalZiplineColor, "255 255 255 255");
         return clone;
     }
+
+    private static string NormalizeColor(string? color, string fallback) => string.IsNullOrWhiteSpace(color)
+        ? fallback
+        : color.Trim();
 }

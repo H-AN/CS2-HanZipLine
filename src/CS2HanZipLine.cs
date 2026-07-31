@@ -16,7 +16,7 @@ namespace CS2HanZipLine;
 
 [PluginMetadata(
     Id = "CS2.HanZipLine",
-    Version = "0.3.0",
+    Version = "0.4.0",
     Name = "CS2-HanZipLine",
     Author = "H-AN",
     Description = "Player-created two-way ziplines for CS2."

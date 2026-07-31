@@ -41,6 +41,7 @@ public sealed class ZiplineService(
         MapGenerationResolver = mapGenerationResolver;
         _rides.MapGenerationResolver = mapGenerationResolver;
         _rides.PairResolver = TryGetPair;
+        _rides.CanUsePair = CanUsePair;
         _rides.PairBecameUnused = pair => RemovePair(pair.Id, ZiplineDetachReason.PairRemoved);
         _rides.RiderDetached = HandleRiderDetached;
     }
@@ -121,7 +122,13 @@ public sealed class ZiplineService(
             return false;
         }
 
-        if (!TryCreatePair(player.SteamID, player.SessionId, start, end, isMapPlaced: false, useRealisticBuild: _config.RealisticBuild, out message))
+        if (!TryGetPlayerZiplineTeam(player, out var team))
+        {
+            message = "Zipline.ErrorPlayerUnavailable";
+            return false;
+        }
+
+        if (!TryCreatePair(player.SteamID, player.SessionId, start, end, team, isMapPlaced: false, useRealisticBuild: _config.RealisticBuild, out message))
         {
             return false;
         }
@@ -130,7 +137,7 @@ public sealed class ZiplineService(
         return true;
     }
 
-    public bool TryCreateForAdministrator(IPlayer player, out string message)
+    public bool TryCreateForAdministrator(IPlayer player, ZiplineTeam team, out string message)
     {
         if (!_config.Enable)
         {
@@ -160,6 +167,7 @@ public sealed class ZiplineService(
             player.SessionId,
             start,
             end,
+            team,
             isMapPlaced: false,
             useRealisticBuild: _config.RealisticBuild,
             out message);
@@ -265,7 +273,7 @@ public sealed class ZiplineService(
                 continue;
             }
 
-            if (!TryCreatePair(0, 0, start, end, isMapPlaced: true, useRealisticBuild: false, out var message))
+            if (!TryCreatePair(0, 0, start, end, entry.Team, isMapPlaced: true, useRealisticBuild: false, out var message))
             {
                 if (message == "Zipline.ErrorGlobalLimit")
                 {
@@ -398,6 +406,7 @@ public sealed class ZiplineService(
         ulong ownerSessionId,
         AnchorPlacement start,
         AnchorPlacement end,
+        ZiplineTeam team,
         bool isMapPlaced,
         bool useRealisticBuild,
         out string message)
@@ -431,6 +440,7 @@ public sealed class ZiplineService(
             new ZiplineAnchor(end.SurfacePosition, end.SurfaceNormal, end.Angles),
             now,
             expiresAt,
+            team,
             isMapPlaced);
 
         _pendingPairsById[pair.Id] = pair;
@@ -818,7 +828,8 @@ public sealed class ZiplineService(
             if (candidate.IsExpired(now)
                 || candidate.RemoveWhenUnused
                 || (_config.MaxUses > 0 && candidate.Uses >= _config.MaxUses)
-                || !_entities.IsPairReady(candidate))
+                || !_entities.IsPairReady(candidate)
+                || !CanUsePair(player, candidate))
             {
                 continue;
             }
@@ -927,6 +938,34 @@ public sealed class ZiplineService(
     }
 
     private int ResolveMapGeneration() => MapGenerationResolver?.Invoke() ?? 0;
+
+    private bool CanUsePair(IPlayer player, ZiplinePair pair)
+    {
+        if (_config.AllowAllTeamsUseZiplines || pair.Team == ZiplineTeam.Global)
+        {
+            return true;
+        }
+
+        return TryGetPlayerZiplineTeam(player, out var playerTeam) && playerTeam == pair.Team;
+    }
+
+    private static bool TryGetPlayerZiplineTeam(IPlayer player, out ZiplineTeam team)
+    {
+        team = ZiplineTeam.Global;
+        if (player.PlayerPawn is not { IsValid: true } pawn)
+        {
+            return false;
+        }
+
+        team = pawn.TeamNum switch
+        {
+            (int)Team.CT => ZiplineTeam.CT,
+            (int)Team.T => ZiplineTeam.T,
+            _ => ZiplineTeam.Global
+        };
+
+        return team is ZiplineTeam.CT or ZiplineTeam.T;
+    }
 
     private static string[] ParseAdminPermissions(string? rawPermissions)
     {

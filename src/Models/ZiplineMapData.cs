@@ -1,10 +1,11 @@
 using SwiftlyS2.Shared.Natives;
+using System.Text.Json.Serialization;
 
 namespace CS2HanZipLine.Models;
 
 public sealed class ZiplineMapDocument
 {
-    public int Version { get; init; } = 1;
+    public int Version { get; init; } = 2;
     public List<ZiplineMapEntry> Ziplines { get; init; } = [];
 }
 
@@ -14,13 +15,16 @@ public sealed class ZiplineMapEntry
     public float[] StartNormal { get; init; } = [];
     public float[] EndSurface { get; init; } = [];
     public float[] EndNormal { get; init; } = [];
+    [JsonConverter(typeof(JsonStringEnumConverter<ZiplineTeam>))]
+    public ZiplineTeam Team { get; init; } = ZiplineTeam.Global;
 
     public static ZiplineMapEntry FromPair(ZiplinePair pair) => new()
     {
         StartSurface = ToArray(pair.AnchorA.SurfacePosition),
         StartNormal = ToArray(pair.AnchorA.SurfaceNormal),
         EndSurface = ToArray(pair.AnchorB.SurfacePosition),
-        EndNormal = ToArray(pair.AnchorB.SurfaceNormal)
+        EndNormal = ToArray(pair.AnchorB.SurfaceNormal),
+        Team = pair.Team
     };
 
     public bool TryGetSurfaces(out Vector startSurface, out Vector startNormal, out Vector endSurface, out Vector endNormal)

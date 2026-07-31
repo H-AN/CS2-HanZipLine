@@ -1,4 +1,5 @@
 using SwiftlyS2.Core.Menus.OptionsBase;
+using CS2HanZipLine.Models;
 using SwiftlyS2.Shared;
 using SwiftlyS2.Shared.Menus;
 using SwiftlyS2.Shared.Misc;
@@ -36,7 +37,7 @@ public sealed class ZiplineMenuService(
 
         if (_ziplines.CanManage(player))
         {
-            var adminButton = new ButtonMenuOption(T(player, "Zipline.MenuAdmin")) { CloseAfterClick = true };
+            var adminButton = new ButtonMenuOption(T(player, "Zipline.MenuAdmin")) { CloseAfterClick = false };
             adminButton.Click += async (_, args) =>
             {
                 if (args.Player is { IsValid: true, IsFakeClient: false } clicker)
@@ -65,10 +66,12 @@ public sealed class ZiplineMenuService(
             .SetPlayerFrozen(false)
             .Build();
 
-        menu.AddOption(CreateScheduledButton(player, "Zipline.AdminCreate", MenuAction.CreateAdmin));
+        menu.AddOption(CreateScheduledButton(player, "Zipline.AdminCreateCT", MenuAction.CreateAdminCT));
+        menu.AddOption(CreateScheduledButton(player, "Zipline.AdminCreateT", MenuAction.CreateAdminT));
+        menu.AddOption(CreateScheduledButton(player, "Zipline.AdminCreateGlobal", MenuAction.CreateAdminGlobal));
         menu.AddOption(CreateScheduledButton(player, "Zipline.AdminRemove", MenuAction.RemoveAny));
 
-        var saveButton = new ButtonMenuOption(T(player, "Zipline.AdminSave")) { CloseAfterClick = true };
+        var saveButton = new ButtonMenuOption(T(player, "Zipline.AdminSave")) { CloseAfterClick = false };
         saveButton.Click += async (_, args) =>
         {
             if (args.Player is { IsValid: true, IsFakeClient: false } clicker)
@@ -78,7 +81,7 @@ public sealed class ZiplineMenuService(
         };
         menu.AddOption(saveButton);
 
-        var reloadButton = new ButtonMenuOption(T(player, "Zipline.AdminReload")) { CloseAfterClick = true };
+        var reloadButton = new ButtonMenuOption(T(player, "Zipline.AdminReload")) { CloseAfterClick = false };
         reloadButton.Click += async (_, args) =>
         {
             if (args.Player is { IsValid: true, IsFakeClient: false } clicker)
@@ -100,7 +103,7 @@ public sealed class ZiplineMenuService(
 
     private ButtonMenuOption CreateScheduledButton(IPlayer player, string translationKey, MenuAction action)
     {
-        var button = new ButtonMenuOption(T(player, translationKey)) { CloseAfterClick = true };
+        var button = new ButtonMenuOption(T(player, translationKey)) { CloseAfterClick = false };
         button.Click += async (_, args) =>
         {
             if (args.Player is { IsValid: true, IsFakeClient: false } clicker)
@@ -221,9 +224,17 @@ public sealed class ZiplineMenuService(
                     _ziplines.TryDeleteOwnedAtAim(player, out var removeMessage);
                     player.SendMessage(MessageType.Chat, T(player, removeMessage));
                     break;
-                case MenuAction.CreateAdmin:
-                    _ziplines.TryCreateForAdministrator(player, out var adminCreateMessage);
-                    player.SendMessage(MessageType.Chat, T(player, adminCreateMessage));
+                case MenuAction.CreateAdminCT:
+                    _ziplines.TryCreateForAdministrator(player, ZiplineTeam.CT, out var adminCreateCtMessage);
+                    player.SendMessage(MessageType.Chat, T(player, adminCreateCtMessage));
+                    break;
+                case MenuAction.CreateAdminT:
+                    _ziplines.TryCreateForAdministrator(player, ZiplineTeam.T, out var adminCreateTMessage);
+                    player.SendMessage(MessageType.Chat, T(player, adminCreateTMessage));
+                    break;
+                case MenuAction.CreateAdminGlobal:
+                    _ziplines.TryCreateForAdministrator(player, ZiplineTeam.Global, out var adminCreateGlobalMessage);
+                    player.SendMessage(MessageType.Chat, T(player, adminCreateGlobalMessage));
                     break;
                 case MenuAction.RemoveAny:
                     _ziplines.TryDeleteAnyAtAim(player, out var adminRemoveMessage);
@@ -269,7 +280,9 @@ public sealed class ZiplineMenuService(
     {
         Create,
         RemoveOwned,
-        CreateAdmin,
+        CreateAdminCT,
+        CreateAdminT,
+        CreateAdminGlobal,
         RemoveAny,
         ClearAll,
         ToggleVision

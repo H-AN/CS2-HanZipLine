@@ -18,6 +18,7 @@ public sealed class ZiplineRideService(ISwiftlyCore core, ZiplineEntityService e
     private ZiplineConfig _config = new();
 
     public Func<int, ZiplinePair?>? PairResolver { get; set; }
+    public Func<IPlayer, ZiplinePair, bool>? CanUsePair { get; set; }
     public Func<int>? MapGenerationResolver { get; set; }
     public Action<ZiplinePair>? PairBecameUnused { get; set; }
     public Action<RiderState, ZiplineDetachReason>? RiderDetached { get; set; }
@@ -43,6 +44,12 @@ public sealed class ZiplineRideService(ISwiftlyCore core, ZiplineEntityService e
         if (IsRiding(player))
         {
             message = "Zipline.ErrorAlreadyRiding";
+            return false;
+        }
+
+        if (CanUsePair is not null && !CanUsePair(player, pair))
+        {
+            message = "Zipline.ErrorPairUnavailable";
             return false;
         }
 

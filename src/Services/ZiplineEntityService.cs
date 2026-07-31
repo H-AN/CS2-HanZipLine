@@ -26,8 +26,8 @@ public sealed class ZiplineEntityService(ISwiftlyCore core, ILogger<ZiplineEntit
 
     public void ApplyAdminVision(ZiplinePair pair)
     {
-        ApplyAdminVision(TryGetEntity(pair.AnchorA.EntityHandle));
-        ApplyAdminVision(TryGetEntity(pair.AnchorB.EntityHandle));
+        ApplyAdminVision(TryGetEntity(pair.AnchorA.EntityHandle), pair.Team);
+        ApplyAdminVision(TryGetEntity(pair.AnchorB.EntityHandle), pair.Team);
     }
 
     public void OnPrecacheResource(IOnPrecacheResourceEvent @event)
@@ -50,7 +50,7 @@ public sealed class ZiplineEntityService(ISwiftlyCore core, ILogger<ZiplineEntit
         Func<int> currentMapGeneration,
         Action<ZiplinePair, bool, string> completed)
     {
-        if (!TryCreateAnchor(pair.AnchorA) || !TryCreateAnchor(pair.AnchorB))
+        if (!TryCreateAnchor(pair.AnchorA, pair.Team) || !TryCreateAnchor(pair.AnchorB, pair.Team))
         {
             DestroyPairEntities(pair);
             return false;
@@ -244,7 +244,7 @@ public sealed class ZiplineEntityService(ISwiftlyCore core, ILogger<ZiplineEntit
 
     public bool TryCreatePairNextTick(ZiplinePair pair, int mapGeneration, Func<int> currentMapGeneration, Action<ZiplinePair, bool, string> completed)
     {
-        if (!TryCreateAnchor(pair.AnchorA) || !TryCreateAnchor(pair.AnchorB))
+        if (!TryCreateAnchor(pair.AnchorA, pair.Team) || !TryCreateAnchor(pair.AnchorB, pair.Team))
         {
             DestroyPairEntities(pair);
             completed(pair, false, "Zipline.ErrorEntityCreate");
@@ -285,7 +285,7 @@ public sealed class ZiplineEntityService(ISwiftlyCore core, ILogger<ZiplineEntit
         Func<int> currentMapGeneration,
         Action<ZiplinePair, bool, string> completed)
     {
-        if (!pair.AnchorA.IsResolved || TryGetEntity(pair.AnchorA.EntityHandle) is null || !TryCreateAnchor(pair.AnchorB))
+        if (!pair.AnchorA.IsResolved || TryGetEntity(pair.AnchorA.EntityHandle) is null || !TryCreateAnchor(pair.AnchorB, pair.Team))
         {
             DestroyPairEntities(pair);
             return false;
@@ -362,7 +362,7 @@ public sealed class ZiplineEntityService(ISwiftlyCore core, ILogger<ZiplineEntit
         anchor.IsResolved = false;
     }
 
-    private bool TryCreateAnchor(ZiplineAnchor anchor)
+    private bool TryCreateAnchor(ZiplineAnchor anchor, ZiplineTeam team)
     {
         CBaseModelEntity? entity;
         try
@@ -388,7 +388,7 @@ public sealed class ZiplineEntityService(ISwiftlyCore core, ILogger<ZiplineEntit
             entity.DispatchSpawn();
             entity.SetModel(_config.AnchorModel);
             entity.SetScale(_config.AnchorModelScale);
-            ApplyAdminVision(entity);
+            ApplyAdminVision(entity, team);
 
             var handle = _core.EntitySystem.GetRefEHandle(entity);
             if (!handle.IsValid)
@@ -466,7 +466,7 @@ public sealed class ZiplineEntityService(ISwiftlyCore core, ILogger<ZiplineEntit
             return false;
         }
 
-        if (beam is not { IsValid: true } || !TryParseColor(_config.BeamColor, out var color))
+        if (beam is not { IsValid: true } || !TryParseColor(GetZiplineColor(pair.Team), out var color))
         {
             TryDestroyEntity(beam);
             return false;
@@ -571,27 +571,45 @@ public sealed class ZiplineEntityService(ISwiftlyCore core, ILogger<ZiplineEntit
         }
     }
 
-    private void ApplyAdminVision(CBaseModelEntity? entity)
+    private void ApplyAdminVision(CBaseModelEntity? entity, ZiplineTeam team)
     {
         if (entity is not { IsValid: true })
         {
             return;
         }
 
-        if (_adminVisionEnabled && TryParseColor(_config.AdminVisionGlowColor, out var glowColor))
+        if (_adminVisionEnabled && TryParseColor(GetZiplineColor(team), out var glowColor))
         {
             entity.Glow.GlowColorOverride = glowColor;
             entity.Glow.GlowRange = _config.AdminVisionGlowRange;
             entity.Glow.GlowRangeMin = 0;
             entity.Glow.GlowTeam = -1;
             entity.Glow.GlowType = 3;
+            NotifyGlowUpdated(entity.Glow);
             return;
         }
 
         entity.Glow.GlowRange = 0;
         entity.Glow.GlowRangeMin = 0;
         entity.Glow.GlowType = 0;
+        NotifyGlowUpdated(entity.Glow);
     }
+
+    private static void NotifyGlowUpdated(CGlowProperty glow)
+    {
+        glow.GlowColorOverrideUpdated();
+        glow.GlowRangeUpdated();
+        glow.GlowRangeMinUpdated();
+        glow.GlowTeamUpdated();
+        glow.GlowTypeUpdated();
+    }
+
+    private string GetZiplineColor(ZiplineTeam team) => team switch
+    {
+        ZiplineTeam.CT => _config.CTZiplineColor,
+        ZiplineTeam.T => _config.TZiplineColor,
+        _ => _config.GlobalZiplineColor
+    };
 
     private static bool IsUsableBounds(Vector mins, Vector maxs)
     {

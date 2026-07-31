@@ -14,6 +14,7 @@ public sealed class ZiplinePair
         ZiplineAnchor anchorB,
         float createdAt,
         float expiresAt,
+        ZiplineTeam team,
         bool isMapPlaced = false)
     {
         Id = id;
@@ -23,6 +24,7 @@ public sealed class ZiplinePair
         AnchorB = anchorB;
         CreatedAt = createdAt;
         ExpiresAt = expiresAt;
+        Team = team is ZiplineTeam.CT or ZiplineTeam.T ? team : ZiplineTeam.Global;
         IsMapPlaced = isMapPlaced;
     }
 
@@ -42,6 +44,7 @@ public sealed class ZiplinePair
     public bool IsBuildFlightActive { get; set; }
     public float CreatedAt { get; }
     public float ExpiresAt { get; }
+    public ZiplineTeam Team { get; }
     public int Uses { get; set; }
     public bool RemoveWhenUnused { get; set; }
     public bool IsMapPlaced { get; }
