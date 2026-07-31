@@ -1,7 +1,7 @@
 模型候选
 
 滑索架：models/props/cs_italy/it_streetlampleg.vmdl
-绳子模型：models/generic/grapplinghook_01/grapplinghook_rope_tiling_01.vmdl
+绳子模型：models/generic/grapplinghook_01/grapplinghook_rope_tiling_01.vmdl //未使用
 
 自定义滑索音效（仓库资源）
 
@@ -24,3 +24,10 @@
 "RideEndSound": "han.zipline.end",
 
 未使用工坊资源时，请改用服务器已挂载的声音事件；将单项音效字段留空可禁用该音效。
+未使用自定义音效时默认使用
+音效占位  soundevents/game_sounds_ui.vsndevts
+释放 UI.ContractSeal 
+架设完成  Music.Match.LastRoundHalf
+上滑索 UIPanorama.container_weapon_ticker
+下滑索 UI.CrateOpen
+滑动 UI.StickerScratch
