@@ -4,6 +4,7 @@ public sealed class ZiplineConfig
 {
     public bool Enable { get; set; } = true;
     public bool AdminOnlyCreate { get; set; }
+    public string AdminPermissions { get; set; } = "hanzipline.admin.manage";
     public int MaxActivePairs { get; set; } = 64;
     public int MaxPerPlayer { get; set; } = 10;
     public float CreateCooldownSeconds { get; set; } = 8.0f;
@@ -30,6 +31,8 @@ public sealed class ZiplineConfig
     public float BeamEndWidth { get; set; } = 0.5f;
     public float BeamHaloScale { get; set; } = 3.0f;
     public string BeamColor { get; set; } = "255 255 255 255";
+    public string AdminVisionGlowColor { get; set; } = "255 210 35 255";
+    public int AdminVisionGlowRange { get; set; } = 5000;
 
     public string PrecacheSoundEvent { get; set; } = "soundevents/game_sounds_ui.vsndevts";
 
@@ -77,17 +80,22 @@ public sealed class ZiplineConfig
         clone.BeamWidth = Math.Max(0.01f, clone.BeamWidth);
         clone.BeamEndWidth = Math.Max(0.01f, clone.BeamEndWidth);
         clone.BeamHaloScale = Math.Max(0.0f, clone.BeamHaloScale);
+        clone.AdminVisionGlowRange = Math.Max(0, clone.AdminVisionGlowRange);
         clone.RideLoopInterval = Math.Max(0.05f, clone.RideLoopInterval);
         clone.SoundVolume = Math.Max(0.0f, clone.SoundVolume);
         clone.SoundPitch = Math.Max(0.01f, clone.SoundPitch);
         clone.SurfaceOffset = Math.Max(0.0f, clone.SurfaceOffset);
         clone.GroundTraceDistance = Math.Max(32.0f, clone.GroundTraceDistance);
+        clone.AdminPermissions = clone.AdminPermissions?.Trim() ?? string.Empty;
         clone.AnchorModel = string.IsNullOrWhiteSpace(clone.AnchorModel)
             ? "models/props/cs_italy/it_streetlampleg.vmdl"
             : clone.AnchorModel.Trim();
         clone.BuildFlightModel = string.IsNullOrWhiteSpace(clone.BuildFlightModel)
             ? "weapons/models/grenade/decoy/weapon_decoy.vmdl"
             : clone.BuildFlightModel.Trim();
+        clone.AdminVisionGlowColor = string.IsNullOrWhiteSpace(clone.AdminVisionGlowColor)
+            ? "255 210 35 255"
+            : clone.AdminVisionGlowColor.Trim();
         return clone;
     }
 }

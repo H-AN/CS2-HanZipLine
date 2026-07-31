@@ -18,8 +18,17 @@ public sealed class ZiplineEntityService(ISwiftlyCore core, ILogger<ZiplineEntit
     private readonly ISwiftlyCore _core = core;
     private readonly ILogger<ZiplineEntityService> _logger = logger;
     private ZiplineConfig _config = new();
+    private bool _adminVisionEnabled;
 
     public void UpdateConfig(ZiplineConfig config) => _config = config.CloneNormalized();
+
+    public void SetAdminVisionEnabled(bool enabled) => _adminVisionEnabled = enabled;
+
+    public void ApplyAdminVision(ZiplinePair pair)
+    {
+        ApplyAdminVision(TryGetEntity(pair.AnchorA.EntityHandle));
+        ApplyAdminVision(TryGetEntity(pair.AnchorB.EntityHandle));
+    }
 
     public void OnPrecacheResource(IOnPrecacheResourceEvent @event)
     {
@@ -379,6 +388,7 @@ public sealed class ZiplineEntityService(ISwiftlyCore core, ILogger<ZiplineEntit
             entity.DispatchSpawn();
             entity.SetModel(_config.AnchorModel);
             entity.SetScale(_config.AnchorModelScale);
+            ApplyAdminVision(entity);
 
             var handle = _core.EntitySystem.GetRefEHandle(entity);
             if (!handle.IsValid)
@@ -559,6 +569,28 @@ public sealed class ZiplineEntityService(ISwiftlyCore core, ILogger<ZiplineEntit
             {
             }
         }
+    }
+
+    private void ApplyAdminVision(CBaseModelEntity? entity)
+    {
+        if (entity is not { IsValid: true })
+        {
+            return;
+        }
+
+        if (_adminVisionEnabled && TryParseColor(_config.AdminVisionGlowColor, out var glowColor))
+        {
+            entity.Glow.GlowColorOverride = glowColor;
+            entity.Glow.GlowRange = _config.AdminVisionGlowRange;
+            entity.Glow.GlowRangeMin = 0;
+            entity.Glow.GlowTeam = -1;
+            entity.Glow.GlowType = 3;
+            return;
+        }
+
+        entity.Glow.GlowRange = 0;
+        entity.Glow.GlowRangeMin = 0;
+        entity.Glow.GlowType = 0;
     }
 
     private static bool IsUsableBounds(Vector mins, Vector maxs)

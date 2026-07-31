@@ -57,26 +57,54 @@ public sealed class ZiplinePlacementService(ISwiftlyCore core)
         return true;
     }
 
+    public bool TryGetAimRay(IPlayer player, out Vector origin, out Vector direction)
+    {
+        origin = Vector.Zero;
+        direction = Vector.Zero;
+        return TryGetUsablePawn(player, out var pawn) && TryGetAimRay(pawn, out origin, out direction);
+    }
+
+    public static bool TryCreateSavedPlacement(Vector position, Vector normal, out AnchorPlacement placement)
+    {
+        placement = default;
+        if (!ZiplineMath.IsFinite(position) || !ZiplineMath.TryNormalize(normal, out normal))
+        {
+            return false;
+        }
+
+        placement = CreateAnchorPlacement(position, normal, new Vector(1.0f, 0.0f, 0.0f));
+        return true;
+    }
+
     private bool TraceTargetSurface(CCSPlayerPawn pawn, out SurfaceHit surface, out Vector forward)
     {
         surface = default;
-        forward = Vector.Zero;
-
-        var eyePosition = pawn.EyePosition;
-        if (eyePosition is null)
+        if (!TryGetAimRay(pawn, out var start, out forward))
         {
             return false;
         }
 
-        pawn.EyeAngles.ToDirectionVectors(out forward, out _, out _);
-        if (!ZiplineMath.TryNormalize(forward, out forward))
-        {
-            return false;
-        }
-
-        var start = new Vector(eyePosition.Value.X, eyePosition.Value.Y, eyePosition.Value.Z);
         var target = start + forward * _config.MaxDistance;
         return TryTraceSolid(start, target, out surface);
+    }
+
+    private static bool TryGetAimRay(CCSPlayerPawn pawn, out Vector origin, out Vector direction)
+    {
+        origin = Vector.Zero;
+        direction = Vector.Zero;
+        if (pawn.EyePosition is not { } eyePosition)
+        {
+            return false;
+        }
+
+        pawn.EyeAngles.ToDirectionVectors(out direction, out _, out _);
+        if (!ZiplineMath.TryNormalize(direction, out direction))
+        {
+            return false;
+        }
+
+        origin = new Vector(eyePosition.X, eyePosition.Y, eyePosition.Z);
+        return true;
     }
 
     private bool FindStartAnchorSurface(CCSPlayerPawn pawn, out SurfaceHit surface)

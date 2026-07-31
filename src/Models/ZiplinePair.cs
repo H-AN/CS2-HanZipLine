@@ -6,7 +6,15 @@ namespace CS2HanZipLine.Models;
 
 public sealed class ZiplinePair
 {
-    public ZiplinePair(int id, ulong ownerSteamId, ulong ownerSessionId, ZiplineAnchor anchorA, ZiplineAnchor anchorB, float createdAt, float expiresAt)
+    public ZiplinePair(
+        int id,
+        ulong ownerSteamId,
+        ulong ownerSessionId,
+        ZiplineAnchor anchorA,
+        ZiplineAnchor anchorB,
+        float createdAt,
+        float expiresAt,
+        bool isMapPlaced = false)
     {
         Id = id;
         OwnerSteamId = ownerSteamId;
@@ -15,6 +23,7 @@ public sealed class ZiplinePair
         AnchorB = anchorB;
         CreatedAt = createdAt;
         ExpiresAt = expiresAt;
+        IsMapPlaced = isMapPlaced;
     }
 
     public int Id { get; }
@@ -35,6 +44,7 @@ public sealed class ZiplinePair
     public float ExpiresAt { get; }
     public int Uses { get; set; }
     public bool RemoveWhenUnused { get; set; }
+    public bool IsMapPlaced { get; }
 
     public bool IsExpired(float currentTime) => ExpiresAt > 0.0f && currentTime >= ExpiresAt;
 }

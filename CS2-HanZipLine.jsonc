@@ -3,6 +3,8 @@
     // 核心限制。MaxUses 与 LifetimeSeconds 为 0 时表示不限制。
     "Enable": true,
     "AdminOnlyCreate": false,
+    // 管理员权限标志。多个标志用英文逗号分隔，命中任意一个即可管理；留空会禁用管理员菜单和管理指令。
+    "AdminPermissions": "hanzipline.admin.manage",
     "MaxActivePairs": 64,
     "MaxPerPlayer": 10,
     "CreateCooldownSeconds": 8.0,
@@ -31,6 +33,8 @@
     "BeamEndWidth": 0.5,
     "BeamHaloScale": 3.0,
     "BeamColor": "255 255 255 255",
+    "AdminVisionGlowColor": "255 210 35 255",
+    "AdminVisionGlowRange": 5000,
 
     // 声音事件留空时仅禁用该声音，不改变滑索状态机。
     "PrecacheSoundEvent": "soundevents/game_sounds_ui.vsndevts",

@@ -13,8 +13,6 @@ public sealed class ZiplineService(
     ZiplineRideService rides,
     ZiplineSoundService sounds)
 {
-    private const string AdminPermission = "hanzipline.admin.manage";
-
     private readonly ISwiftlyCore _core = core;
     private readonly ZiplinePlacementService _placement = placement;
     private readonly ZiplineEntityService _entities = entities;
@@ -28,8 +26,13 @@ public sealed class ZiplineService(
     private readonly List<int> _pendingPairIdsToCancel = [];
     private ZiplineConfig _config = new();
     private int _nextPairId = 1;
+    private bool _adminVisionEnabled;
+    private string[] _adminPermissions = [];
 
     public Func<int>? MapGenerationResolver { get; set; }
+    public bool ClearEachRoundEnabled => _config.ClearEachRound;
+    public bool AdminVisionEnabled => _adminVisionEnabled;
+    public int ActivePairCount => _pairsById.Count + _pendingPairsById.Count;
 
     public void ConfigureRuntime(Func<int> mapGenerationResolver)
     {
@@ -42,13 +45,33 @@ public sealed class ZiplineService(
     public void UpdateConfig(ZiplineConfig config)
     {
         _config = config.CloneNormalized();
+        _adminPermissions = ParseAdminPermissions(_config.AdminPermissions);
         _placement.UpdateConfig(_config);
         _entities.UpdateConfig(_config);
         _rides.UpdateConfig(_config);
         _sounds.UpdateConfig(_config);
+        RefreshAdminVision();
     }
 
     public void OnPrecacheResource(SwiftlyS2.Shared.Events.IOnPrecacheResourceEvent @event) => _entities.OnPrecacheResource(@event);
+
+    public bool CanManage(IPlayer player)
+    {
+        if (!TryGetHumanPlayer(player, requireAlive: false))
+        {
+            return false;
+        }
+
+        foreach (var permission in _adminPermissions)
+        {
+            if (_core.Permission.PlayerHasPermission(player.SteamID, permission))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     public bool TryCreateForPlayer(IPlayer player, out string message)
     {
@@ -64,7 +87,7 @@ public sealed class ZiplineService(
             return false;
         }
 
-        if (_config.AdminOnlyCreate && !_core.Permission.PlayerHasPermission(player.SteamID, AdminPermission))
+        if (_config.AdminOnlyCreate && !CanManage(player))
         {
             message = "Zipline.ErrorCreatePermission";
             return false;
@@ -84,12 +107,6 @@ public sealed class ZiplineService(
             return false;
         }
 
-        if (_pairsById.Count + _pendingPairsById.Count >= _config.MaxActivePairs)
-        {
-            message = "Zipline.ErrorGlobalLimit";
-            return false;
-        }
-
         if (CountOwnedPairs(player.SteamID) >= _config.MaxPerPlayer)
         {
             message = "Zipline.ErrorPlayerLimit";
@@ -101,46 +118,48 @@ public sealed class ZiplineService(
             return false;
         }
 
-        if (!ValidateEstimatedPair(start, end, out message))
+        if (!TryCreatePair(player.SteamID, player.SessionId, start, end, isMapPlaced: false, useRealisticBuild: _config.RealisticBuild, out message))
         {
-            return false;
-        }
-
-        var expiresAt = _config.LifetimeSeconds > 0.0f ? now + _config.LifetimeSeconds : 0.0f;
-        var pair = new ZiplinePair(
-            _nextPairId++,
-            player.SteamID,
-            player.SessionId,
-            new ZiplineAnchor(start.SurfacePosition, start.SurfaceNormal, start.Angles),
-            new ZiplineAnchor(end.SurfacePosition, end.SurfaceNormal, end.Angles),
-            now,
-            expiresAt);
-
-        _pendingPairsById[pair.Id] = pair;
-        if (_config.RealisticBuild)
-        {
-            if (!_entities.TryPrepareBuildPairNextTick(
-                    pair,
-                    MapGenerationResolver?.Invoke() ?? 0,
-                    ResolveMapGeneration,
-                    OnBuildPairPrepared))
-            {
-                _pendingPairsById.Remove(pair.Id);
-                _entities.DestroyPairEntities(pair);
-                message = "Zipline.ErrorEntityCreate";
-                return false;
-            }
-        }
-        else if (!_entities.TryCreatePairNextTick(pair, MapGenerationResolver?.Invoke() ?? 0, ResolveMapGeneration, OnPairCreated))
-        {
-            _pendingPairsById.Remove(pair.Id);
-            message = "Zipline.ErrorEntityCreate";
             return false;
         }
 
         _lastCreateTimeBySteamId[player.SteamID] = now;
-        message = "Zipline.Creating";
         return true;
+    }
+
+    public bool TryCreateForAdministrator(IPlayer player, out string message)
+    {
+        if (!_config.Enable)
+        {
+            message = "Zipline.ErrorDisabled";
+            return false;
+        }
+
+        if (!CanManage(player))
+        {
+            message = "Zipline.ErrorAdminPermission";
+            return false;
+        }
+
+        if (!TryGetHumanPlayer(player, requireAlive: true))
+        {
+            message = "Zipline.ErrorPlayerUnavailable";
+            return false;
+        }
+
+        if (!_placement.TryBuildPlacement(player, out var start, out var end, out message))
+        {
+            return false;
+        }
+
+        return TryCreatePair(
+            player.SteamID,
+            player.SessionId,
+            start,
+            end,
+            isMapPlaced: false,
+            useRealisticBuild: _config.RealisticBuild,
+            out message);
     }
 
     public bool TryDeleteOwnedAtAim(IPlayer player, out string message)
@@ -186,6 +205,84 @@ public sealed class ZiplineService(
         RemovePair(nearest.Id, ZiplineDetachReason.PairRemoved);
         message = "Zipline.PairRemoved";
         return true;
+    }
+
+    public bool TryDeleteAnyAtAim(IPlayer player, out string message)
+    {
+        if (!CanManage(player))
+        {
+            message = "Zipline.ErrorAdminPermission";
+            return false;
+        }
+
+        if (!TryGetHumanPlayer(player, requireAlive: true))
+        {
+            message = "Zipline.ErrorPlayerUnavailable";
+            return false;
+        }
+
+        if (!_placement.TryGetAimRay(player, out var eyePosition, out var direction))
+        {
+            message = "Zipline.ErrorAimSurface";
+            return false;
+        }
+
+        var nearest = FindPairAtAim(eyePosition, direction);
+        if (nearest is null)
+        {
+            message = "Zipline.ErrorNoPairAtAim";
+            return false;
+        }
+
+        RemovePair(nearest.Id, ZiplineDetachReason.PairRemoved);
+        message = "Zipline.PairRemoved";
+        return true;
+    }
+
+    public IReadOnlyList<ZiplineMapEntry> GetMapEntries()
+    {
+        var entries = new List<ZiplineMapEntry>(_pairsById.Count);
+        foreach (var pair in _pairsById.Values)
+        {
+            entries.Add(ZiplineMapEntry.FromPair(pair));
+        }
+
+        return entries;
+    }
+
+    public int CreateMapPairs(IEnumerable<ZiplineMapEntry> entries)
+    {
+        var created = 0;
+        foreach (var entry in entries)
+        {
+            if (!entry.TryGetSurfaces(out var startPosition, out var startNormal, out var endPosition, out var endNormal)
+                || !ZiplinePlacementService.TryCreateSavedPlacement(startPosition, startNormal, out var start)
+                || !ZiplinePlacementService.TryCreateSavedPlacement(endPosition, endNormal, out var end))
+            {
+                continue;
+            }
+
+            if (!TryCreatePair(0, 0, start, end, isMapPlaced: true, useRealisticBuild: false, out var message))
+            {
+                if (message == "Zipline.ErrorGlobalLimit")
+                {
+                    break;
+                }
+
+                continue;
+            }
+
+            created++;
+        }
+
+        return created;
+    }
+
+    public void SetAdminVisionEnabled(bool enabled)
+    {
+        _adminVisionEnabled = enabled;
+        _entities.SetAdminVisionEnabled(enabled);
+        RefreshAdminVision();
     }
 
     public void HandleKeyStateChanged(SwiftlyS2.Shared.Events.IOnClientKeyStateChangedEvent @event)
@@ -285,6 +382,125 @@ public sealed class ZiplineService(
         _pendingPairIdsToCancel.Clear();
         _lastCreateTimeBySteamId.Clear();
         _rides.ClearAll(reason);
+    }
+
+    private bool TryCreatePair(
+        ulong ownerSteamId,
+        ulong ownerSessionId,
+        AnchorPlacement start,
+        AnchorPlacement end,
+        bool isMapPlaced,
+        bool useRealisticBuild,
+        out string message)
+    {
+        if (!_config.Enable)
+        {
+            message = "Zipline.ErrorDisabled";
+            return false;
+        }
+
+        if (ActivePairCount >= _config.MaxActivePairs)
+        {
+            message = "Zipline.ErrorGlobalLimit";
+            return false;
+        }
+
+        if (!ValidateEstimatedPair(start, end, out message))
+        {
+            return false;
+        }
+
+        var now = _core.Engine.GlobalVars.CurrentTime;
+        var expiresAt = !isMapPlaced && _config.LifetimeSeconds > 0.0f
+            ? now + _config.LifetimeSeconds
+            : 0.0f;
+        var pair = new ZiplinePair(
+            _nextPairId++,
+            ownerSteamId,
+            ownerSessionId,
+            new ZiplineAnchor(start.SurfacePosition, start.SurfaceNormal, start.Angles),
+            new ZiplineAnchor(end.SurfacePosition, end.SurfaceNormal, end.Angles),
+            now,
+            expiresAt,
+            isMapPlaced);
+
+        _pendingPairsById[pair.Id] = pair;
+        if (useRealisticBuild)
+        {
+            if (_entities.TryPrepareBuildPairNextTick(pair, ResolveMapGeneration(), ResolveMapGeneration, OnBuildPairPrepared))
+            {
+                message = "Zipline.Creating";
+                return true;
+            }
+        }
+        else if (_entities.TryCreatePairNextTick(pair, ResolveMapGeneration(), ResolveMapGeneration, OnPairCreated))
+        {
+            message = "Zipline.Creating";
+            return true;
+        }
+
+        _pendingPairsById.Remove(pair.Id);
+        _entities.DestroyPairEntities(pair);
+        message = "Zipline.ErrorEntityCreate";
+        return false;
+    }
+
+    private ZiplinePair? FindPairAtAim(Vector eyePosition, Vector direction)
+    {
+        ZiplinePair? nearest = null;
+        var bestPerpendicularDistanceSquared = _config.UseRadius * _config.UseRadius;
+        var bestAlongDistance = float.MaxValue;
+        foreach (var pair in _pairsById.Values)
+        {
+            ConsiderAdminAimPoint(pair, pair.AnchorA.BasePosition, eyePosition, direction, ref nearest, ref bestPerpendicularDistanceSquared, ref bestAlongDistance);
+            ConsiderAdminAimPoint(pair, pair.AnchorA.CablePosition, eyePosition, direction, ref nearest, ref bestPerpendicularDistanceSquared, ref bestAlongDistance);
+            ConsiderAdminAimPoint(pair, pair.AnchorB.BasePosition, eyePosition, direction, ref nearest, ref bestPerpendicularDistanceSquared, ref bestAlongDistance);
+            ConsiderAdminAimPoint(pair, pair.AnchorB.CablePosition, eyePosition, direction, ref nearest, ref bestPerpendicularDistanceSquared, ref bestAlongDistance);
+        }
+
+        return nearest;
+    }
+
+    private static void ConsiderAdminAimPoint(
+        ZiplinePair candidate,
+        Vector point,
+        Vector eyePosition,
+        Vector direction,
+        ref ZiplinePair? nearest,
+        ref float bestPerpendicularDistanceSquared,
+        ref float bestAlongDistance)
+    {
+        var toPoint = point - eyePosition;
+        var alongDistance = ZiplineMath.Dot(toPoint, direction);
+        if (alongDistance < 0.0f)
+        {
+            return;
+        }
+
+        var perpendicularDistanceSquared = ZiplineMath.DistanceSquared(point, eyePosition + direction * alongDistance);
+        if (perpendicularDistanceSquared > bestPerpendicularDistanceSquared
+            || (perpendicularDistanceSquared >= bestPerpendicularDistanceSquared && alongDistance >= bestAlongDistance))
+        {
+            return;
+        }
+
+        nearest = candidate;
+        bestPerpendicularDistanceSquared = perpendicularDistanceSquared;
+        bestAlongDistance = alongDistance;
+    }
+
+    private void RefreshAdminVision()
+    {
+        _entities.SetAdminVisionEnabled(_adminVisionEnabled);
+        foreach (var pair in _pairsById.Values)
+        {
+            _entities.ApplyAdminVision(pair);
+        }
+
+        foreach (var pair in _pendingPairsById.Values)
+        {
+            _entities.ApplyAdminVision(pair);
+        }
     }
 
     private void AdvanceBuildFlights(float currentTime)
@@ -568,6 +784,20 @@ public sealed class ZiplineService(
     }
 
     private int ResolveMapGeneration() => MapGenerationResolver?.Invoke() ?? 0;
+
+    private static string[] ParseAdminPermissions(string? rawPermissions)
+    {
+        if (string.IsNullOrWhiteSpace(rawPermissions))
+        {
+            return [];
+        }
+
+        return rawPermissions
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(static permission => permission.Length > 0)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+    }
 
     private ZiplinePair? TryGetPair(int pairId)
     {
