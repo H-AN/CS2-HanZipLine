@@ -6,6 +6,8 @@
 
 # CS2-HanZipLine
 
+video https://www.bilibili.com/video/BV1AoGN6XEX4/
+
 面向 CS2 服务器的双向滑索插件。玩家可以在地图中放置滑索并按 `F` 乘坐；管理员可以将所有玩家共同布置的滑索保存为地图路线，在以后每次加载该地图时自动恢复。
 
 当前版本：`v0.4.0`
