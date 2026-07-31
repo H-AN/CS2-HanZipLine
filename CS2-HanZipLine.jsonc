@@ -16,7 +16,7 @@
     "AllowAllTeamsUseZiplines": true,
     // BOT 逻辑默认关闭。开启后会在 BotUseRange 内朝最近端点移动，进入 UseRadius 后由插件直接挂索，不模拟按键。
     "BotAllowUse": false,
-    "BotUseRange": 300.0,
+    "BotUseRange": 160.0,
     "BotUseCooldownSeconds": 20.0,
     "BotTargetTimeoutSeconds": 5.0,
     "BotApproachSpeed": 450.0,
@@ -47,16 +47,16 @@
     "AdminVisionGlowRange": 5000,
 
     // 声音事件留空时仅禁用该声音，不改变滑索状态机。
-    "PrecacheSoundEvent": "soundevents/game_sounds_ui.vsndevts",
-    "CreateSound": "Music.Match.LastRoundHalf",
-    "BuildSound": "UI.ContractSeal",
-    "RideStartSound": "UIPanorama.container_weapon_ticker",
-    "RideLoopSound": "UI.StickerScratch",
+    "PrecacheSoundEvent": "soundevents/hanziplinesounds.vsndevts",
+    "CreateSound": "han.zipline.ziplinecreace",
+    "BuildSound": "han.zipline.ziplinefire",
+    "RideStartSound": "han.zipline.start",
+    "RideLoopSound": "han.zipline.slideloop",
     "RideLoopInterval": 0.5,
-    "RideEndSound": "UI.CrateOpen",
+    "RideEndSound": "han.zipline.end",
     "SoundVolume": 1.0,
     "SoundPitch": 1.0,
-    "RealisticBuild": false,
+    "RealisticBuild": true,
 
     // 高级摆放参数。SurfaceOffset 让纯视觉端点略微离开 Trace 命中面。
     "SurfaceOffset": 2.0,

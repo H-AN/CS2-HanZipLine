@@ -14,7 +14,7 @@ public sealed class ZiplineConfig
     public float UseRadius { get; set; } = 96.0f;
     public bool AllowAllTeamsUseZiplines { get; set; } = true;
     public bool BotAllowUse { get; set; }
-    public float BotUseRange { get; set; } = 300.0f;
+    public float BotUseRange { get; set; } = 160.0f;
     public float BotUseCooldownSeconds { get; set; } = 20.0f;
     public float BotTargetTimeoutSeconds { get; set; } = 5.0f;
     public float BotApproachSpeed { get; set; } = 450.0f;
@@ -41,25 +41,25 @@ public sealed class ZiplineConfig
     public string GlobalZiplineColor { get; set; } = "255 255 255 255";
     public int AdminVisionGlowRange { get; set; } = 5000;
 
-    public string PrecacheSoundEvent { get; set; } = "soundevents/game_sounds_ui.vsndevts";
+    public string PrecacheSoundEvent { get; set; } = "soundevents/hanziplinesounds.vsndevts";
 
-    public string CreateSound { get; set; } = "Music.Match.LastRoundHalf";
+    public string CreateSound { get; set; } = "han.zipline.ziplinecreace";
 
-    public string BuildSound { get; set; } = "UI.ContractSeal";
+    public string BuildSound { get; set; } = "han.zipline.ziplinefire";
 
-    public string RideStartSound { get; set; } = "UIPanorama.container_weapon_ticker";
+    public string RideStartSound { get; set; } = "han.zipline.start";
 
-    public string RideLoopSound { get; set; } = "UI.StickerScratch";
+    public string RideLoopSound { get; set; } = "han.zipline.slideloop";
 
     public float RideLoopInterval { get; set; } = 0.5f;
 
-    public string RideEndSound { get; set; } = "UI.CrateOpen";
+    public string RideEndSound { get; set; } = "han.zipline.end";
 
     public float SoundVolume { get; set; } = 1.0f;
 
     public float SoundPitch { get; set; } = 1.0f;
 
-    public bool RealisticBuild { get; set; }
+    public bool RealisticBuild { get; set; } = true;
     public float SurfaceOffset { get; set; } = 2.0f;
     public float GroundTraceDistance { get; set; } = 256.0f;
 

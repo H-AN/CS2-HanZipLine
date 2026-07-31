@@ -26,7 +26,7 @@
 
 - 已安装并正常运行 SwiftlyS2 的 CS2 专用服务器。
 - 使用发布包时无需自行编译；自行编译需要 .NET 10 SDK。
-- 端点模型与音效事件必须是服务器可用资源。默认配置使用 CS2 自带资源。
+- 端点模型与音效事件必须是服务器可用资源。默认音效使用仓库提供的自定义资源；服主须将其打包上传到自己的 CS2 创意工坊内容，并确保服务器和客户端均已下载、挂载该内容。
 
 ## 安装
 
@@ -125,7 +125,7 @@
 
 ```jsonc
 "BotAllowUse": true,
-"BotUseRange": 300.0,
+"BotUseRange": 160.0,
 "BotUseCooldownSeconds": 20.0,
 "BotTargetTimeoutSeconds": 5.0,
 "BotApproachSpeed": 450.0
@@ -134,7 +134,7 @@
 | 配置 | 默认值 | 作用 |
 | --- | ---: | --- |
 | `BotAllowUse` | `false` | 是否允许 Bot 自动使用滑索。 |
-| `BotUseRange` | `300` | Bot 开始选择附近滑索端点的范围。 |
+| `BotUseRange` | `160` | Bot 开始选择附近滑索端点的范围。 |
 | `BotUseCooldownSeconds` | `20` | Bot 结束或放弃一次尝试后的等待时间。 |
 | `BotTargetTimeoutSeconds` | `5` | Bot 未能到达目标端点时放弃该次尝试的时间。`0` 为不使用超时。 |
 | `BotApproachSpeed` | `450` | Bot 接近端点时的移动速度。 |
@@ -193,7 +193,7 @@ Bot 不会模拟按键，也不会改变视角；它只会接近允许使用的�
 | `AnchorModel` | `models/props/cs_italy/it_streetlampleg.vmdl` | 两端滑索架模型。 |
 | `AnchorModelScale` | `0.65` | 滑索架模型缩放。 |
 | `CableAttachmentHeightFallback` | `144` | 无法读取模型边界时，缆绳挂点的备用高度。 |
-| `RealisticBuild` | `false` | 是否显示端点模型飞向目标位置的建造效果。 |
+| `RealisticBuild` | `true` | 是否显示端点模型飞向目标位置的建造效果。 |
 | `BuildFlightModel` | `weapons/models/grenade/decoy/weapon_decoy.vmdl` | 建造飞行效果使用的模型。 |
 | `BuildFlightModelScale` | `1` | 飞行模型缩放。 |
 | `BuildFlightSpeed` | `1800` | 飞行模型速度。 |
@@ -205,15 +205,17 @@ Bot 不会模拟按键，也不会改变视角；它只会接近允许使用的�
 
 | 配置 | 默认值 | 说明 |
 | --- | --- | --- |
-| `PrecacheSoundEvent` | `soundevents/game_sounds_ui.vsndevts` | 需要预加载的声音事件文件；留空仅禁用预加载。 |
-| `CreateSound` | `Music.Match.LastRoundHalf` | 滑索创建完成音效。留空可禁用。 |
-| `BuildSound` | `UI.ContractSeal` | 开启真实建造效果时的音效。留空可禁用。 |
-| `RideStartSound` | `UIPanorama.container_weapon_ticker` | 开始乘坐音效。留空可禁用。 |
-| `RideLoopSound` | `UI.StickerScratch` | 乘坐循环音效。留空可禁用。 |
+| `PrecacheSoundEvent` | `soundevents/hanziplinesounds.vsndevts` | 需要预加载的声音事件文件；留空仅禁用预加载。 |
+| `CreateSound` | `han.zipline.ziplinecreace` | 滑索创建完成音效。留空可禁用。 |
+| `BuildSound` | `han.zipline.ziplinefire` | 开启真实建造效果时的音效。留空可禁用。 |
+| `RideStartSound` | `han.zipline.start` | 开始乘坐音效。留空可禁用。 |
+| `RideLoopSound` | `han.zipline.slideloop` | 乘坐循环音效。留空可禁用。 |
 | `RideLoopInterval` | `0.5` | 循环音效间隔秒数。 |
-| `RideEndSound` | `UI.CrateOpen` | 下索或到达终点音效。留空可禁用。 |
+| `RideEndSound` | `han.zipline.end` | 下索或到达终点音效。留空可禁用。 |
 | `SoundVolume` | `1` | 所有滑索音效音量。 |
 | `SoundPitch` | `1` | 所有滑索音效音调。 |
+
+默认音效对应仓库内的 `soundevents/hanziplinesounds.vsndevts_c` 和 `sounds/han/zipline/` 资源。服主须将这些文件按原有虚拟路径打包到自己的 CS2 创意工坊内容中，并让服务器与客户端下载、挂载该内容后再使用默认配置。未使用这些工坊资源时，请改用已挂载的声音事件；将任一音效字段留空可禁用该项音效。
 
 ## 常见用法
 

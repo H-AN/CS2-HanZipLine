@@ -1,0 +1,26 @@
+模型候选
+
+滑索架：models/props/cs_italy/it_streetlampleg.vmdl
+绳子模型：models/generic/grapplinghook_01/grapplinghook_rope_tiling_01.vmdl
+
+自定义滑索音效（仓库资源）
+
+仓库内包含已编译的声音事件与音效文件：
+- soundevents/hanziplinesounds.vsndevts_c
+- sounds/han/zipline/ziplinecreace1.vsnd_c
+- sounds/han/zipline/ziplinefire.vsnd_c
+- sounds/han/zipline/start.vsnd_c
+- sounds/han/zipline/slide_loop.vsnd_c
+- sounds/han/zipline/end.vsnd_c
+
+服主可将以上资源按原有虚拟路径打包并上传到自己的 CS2 创意工坊内容中，让服务器和客户端均下载并挂载该工坊内容。资源可用后，使用以下配置：
+
+"PrecacheSoundEvent": "soundevents/hanziplinesounds.vsndevts",
+"CreateSound": "han.zipline.ziplinecreace",
+"BuildSound": "han.zipline.ziplinefire",
+"RideStartSound": "han.zipline.start",
+"RideLoopSound": "han.zipline.slideloop",
+"RideLoopInterval": 0.5,
+"RideEndSound": "han.zipline.end",
+
+未使用工坊资源时，请改用服务器已挂载的声音事件；将单项音效字段留空可禁用该音效。

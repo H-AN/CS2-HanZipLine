@@ -1,9 +1,0 @@
-models/props/cs_italy/it_streetlampleg.vmdl
-绳子模型 models/generic/grapplinghook_01/grapplinghook_rope_tiling_01.vmdl
-
-音效占位  soundevents/game_sounds_ui.vsndevts
-释放 UI.ContractSeal 
-架设完成  Music.Match.LastRoundHalf
-上滑索 UIPanorama.container_weapon_ticker
-下滑索 UI.CrateOpen
-滑动 UI.StickerScratch

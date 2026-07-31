@@ -26,7 +26,7 @@ Current version: `v0.4.0`
 
 - A CS2 dedicated server with SwiftlyS2 installed and running.
 - .NET 10 SDK only when building from source.
-- Configured anchor models and sound events must be available on the server. The defaults use CS2 assets.
+- Configured anchor models and sound events must be available to the server. Default sounds use the repository's custom assets; package and upload them in your own CS2 Workshop item, then ensure the server and clients download and mount that item.
 
 ## Installation
 
@@ -123,7 +123,7 @@ Bot usage is disabled by default. Enable it only after checking that bots can ph
 
 ```jsonc
 "BotAllowUse": true,
-"BotUseRange": 300.0,
+"BotUseRange": 160.0,
 "BotUseCooldownSeconds": 20.0,
 "BotTargetTimeoutSeconds": 5.0,
 "BotApproachSpeed": 450.0
@@ -132,7 +132,7 @@ Bot usage is disabled by default. Enable it only after checking that bots can ph
 | Setting | Default | Purpose |
 | --- | ---: | --- |
 | `BotAllowUse` | `false` | Enables automatic bot zipline use. |
-| `BotUseRange` | `300` | Distance at which a bot starts selecting a nearby anchor. |
+| `BotUseRange` | `160` | Distance at which a bot starts selecting a nearby anchor. |
 | `BotUseCooldownSeconds` | `20` | Delay after ending or abandoning an attempt. |
 | `BotTargetTimeoutSeconds` | `5` | Time before abandoning an unreachable target. `0` disables the timeout. |
 | `BotApproachSpeed` | `450` | Bot movement speed while approaching an anchor. |
@@ -191,7 +191,7 @@ The main configuration file is `CS2-HanZipLine.jsonc` under the `CS2HanZipLine` 
 | `AnchorModel` | `models/props/cs_italy/it_streetlampleg.vmdl` | Anchor model at both ends. |
 | `AnchorModelScale` | `0.65` | Anchor model scale. |
 | `CableAttachmentHeightFallback` | `144` | Fallback cable attachment height when model bounds are unavailable. |
-| `RealisticBuild` | `false` | Shows a model flying to the destination while building. |
+| `RealisticBuild` | `true` | Shows a model flying to the destination while building. |
 | `BuildFlightModel` | `weapons/models/grenade/decoy/weapon_decoy.vmdl` | Model used by the build-flight effect. |
 | `BuildFlightModelScale` | `1` | Build-flight model scale. |
 | `BuildFlightSpeed` | `1800` | Build-flight speed. |
@@ -203,15 +203,17 @@ The main configuration file is `CS2-HanZipLine.jsonc` under the `CS2HanZipLine` 
 
 | Setting | Default | Description |
 | --- | --- | --- |
-| `PrecacheSoundEvent` | `soundevents/game_sounds_ui.vsndevts` | Sound-event file to precache. Leave empty to skip precaching only. |
-| `CreateSound` | `Music.Match.LastRoundHalf` | Sound played after successful creation. Leave empty to disable. |
-| `BuildSound` | `UI.ContractSeal` | Sound for the realistic build effect. Leave empty to disable. |
-| `RideStartSound` | `UIPanorama.container_weapon_ticker` | Sound played when riding starts. Leave empty to disable. |
-| `RideLoopSound` | `UI.StickerScratch` | Repeating riding sound. Leave empty to disable. |
+| `PrecacheSoundEvent` | `soundevents/hanziplinesounds.vsndevts` | Sound-event file to precache. Leave empty to skip precaching only. |
+| `CreateSound` | `han.zipline.ziplinecreace` | Sound played after successful creation. Leave empty to disable. |
+| `BuildSound` | `han.zipline.ziplinefire` | Sound for the realistic build effect. Leave empty to disable. |
+| `RideStartSound` | `han.zipline.start` | Sound played when riding starts. Leave empty to disable. |
+| `RideLoopSound` | `han.zipline.slideloop` | Repeating riding sound. Leave empty to disable. |
 | `RideLoopInterval` | `0.5` | Interval between repeating ride sounds. |
-| `RideEndSound` | `UI.CrateOpen` | Sound played on detach or arrival. Leave empty to disable. |
+| `RideEndSound` | `han.zipline.end` | Sound played on detach or arrival. Leave empty to disable. |
 | `SoundVolume` | `1` | Volume for all zipline sounds. |
 | `SoundPitch` | `1` | Pitch for all zipline sounds. |
+
+The default sounds correspond to the repository's `soundevents/hanziplinesounds.vsndevts_c` and `sounds/han/zipline/` assets. Package them in your own CS2 Workshop item under the same virtual paths, and ensure both server and clients download and mount it before using the default configuration. If you do not use these Workshop resources, switch to sound events that are already mounted; leave an individual sound field empty to disable it.
 
 ## Common Setups
 
